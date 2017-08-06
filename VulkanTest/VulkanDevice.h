@@ -53,6 +53,17 @@ public:
   {
     return _memoryProperties;
   }*/
+
+
+  /**
+  * Returns index of the queue family for the specified queue type. Returns -1 if no queues for the specified type
+  * exist. There will always be a queue family for the graphics type.
+  */
+  uint32_t getQueueFamily( GpuQueueType type ) const
+  {
+    return _queueInfos[ ( int ) type ].familyIdx;
+  }
+
 private:
   friend class VulkanRenderAPI;
 

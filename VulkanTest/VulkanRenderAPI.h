@@ -8,6 +8,7 @@
 
 #include <vector>
 #include "VulkanDevice.h"
+//#include "RenderWindow.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -25,6 +26,24 @@ public:
       glfwPollEvents( );
     }
   }
+
+
+  // Returns the internal Vulkan instance object.
+  VkInstance getInstance( void ) const
+  {
+    return _instance;
+  }
+
+  GLFWwindow* getWindow( void ) const
+  {
+    return _window;
+  }
+  
+  std::shared_ptr<VulkanDevice> getPresentDevice( void ) const
+  {
+    return _primaryDevices.front( );
+  }
+
   void cleanup( void );
 protected:
 #ifndef NDEBUG
@@ -33,6 +52,7 @@ protected:
   PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
 #endif
   std::vector<VulkanDevicePtr> _devices;
+  std::vector<VulkanDevicePtr> _primaryDevices;
 
 
   bool checkValidationLayerSupport( const std::vector<const char*>& validationLayers )
@@ -65,6 +85,10 @@ protected:
 
     return true;
   }
+  //std::shared_ptr<RenderWindow> _renderWindow;
+  VkSurfaceKHR _surface;
+  //
+
   VkInstance _instance;
   GLFWwindow* _window;
 };

@@ -78,10 +78,13 @@ VulkanRenderAPI::VulkanRenderAPI( )
 }
 
 VulkanRenderAPI::~VulkanRenderAPI( )
-{ }
+{
+}
 
 void VulkanRenderAPI::cleanup( void )
 {
+  vkDestroySurfaceKHR( _instance, _surface, nullptr );
+  _primaryDevices.clear( );
   _devices.clear( );
 #ifndef NDEBUG
   if ( _debugCallback != 0 )
@@ -193,4 +196,42 @@ void VulkanRenderAPI::initialize( void )
   {
     _devices[ i ] = std::make_shared<VulkanDevice>( physicalDevices[ i ], i );
   }
+
+
+  // Find primary device
+  // Note: MULTIGPU - Detect multiple similar devices here if supporting multi-GPU
+  for ( uint32_t i = 0; i < _numDevices; ++i )
+  {
+    bool isPrimary = _devices[ i ]->getDeviceProperties( ).deviceType 
+      == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+
+    if ( isPrimary )
+    {
+      _devices[ i ]->setIsPrimary( );
+      _primaryDevices.push_back( _devices[ i ] );
+      break;
+    }
+  }
+
+  if ( _primaryDevices.empty( ) )
+  {
+    _primaryDevices.push_back( _devices.front( ) );
+  }
+
+  // Surface KHR
+  if ( glfwCreateWindowSurface( this->getInstance( ), this->getWindow( ),
+    nullptr, &_surface ) != VK_SUCCESS )
+  {
+    throw std::runtime_error( "failed to create window surface!" );
+  }
+
+  std::shared_ptr<VulkanDevice> presentDevice = this->getPresentDevice( );
+  VkPhysicalDevice physicalDevice = presentDevice->getPhysical( );
+
+  uint32_t presentQueueFamily = presentDevice->getQueueFamily( GPUT_GRAPHICS );
+
+  VkBool32 supportsPresent = false;
+  vkGetPhysicalDeviceSurfaceSupportKHR( physicalDevice, presentQueueFamily, 
+    _surface, &supportsPresent );
+
 }
