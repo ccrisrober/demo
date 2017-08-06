@@ -12,6 +12,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="VulkanDevice.cpp" />
+    <ClCompile Include="VulkanQueue.cpp" />
+    <ClCompile Include="VulkanRenderAPI.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="VulkanDevice.h" />
+    <ClInclude Include="VulkanQueue.h" />
+    <ClInclude Include="VulkanRenderAPI.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0658C6C0-4CD4-4AD7-A2E2-ADB2C0EBB4DC}</ProjectGuid>
