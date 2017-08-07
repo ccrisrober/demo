@@ -66,7 +66,7 @@ VkBool32 debugMsgCallback( VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeE
 VulkanRenderAPI::VulkanRenderAPI( )
 : _instance( nullptr )
 #ifndef NDEBUG
-, _debugCallback( 0 )
+, _debugCallback( VK_NULL_HANDLE )
 #endif
 {
   glfwInit( );
@@ -234,4 +234,104 @@ void VulkanRenderAPI::initialize( void )
   vkGetPhysicalDeviceSurfaceSupportKHR( physicalDevice, presentQueueFamily, 
     _surface, &supportsPresent );
 
+  // Create swap chain
+  /*mSwapChain = bs_shared_ptr_new<VulkanSwapChain>( );
+  mSwapChain->rebuild( presentDevice, mSurface, props.mWidth, props.mHeight, props.mVSync, mColorFormat, mColorSpace,
+    mDesc.depthBuffer, mDepthFormat );*/
+
+
+
+  uint32_t numFormats;
+  result = vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &numFormats, nullptr );
+  assert( result == VK_SUCCESS );
+  assert( numFormats > 0 );
+
+  std::vector<VkSurfaceFormatKHR> surfaceFormats( numFormats );
+  result = vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &numFormats, surfaceFormats.data( ) );
+  assert( result == VK_SUCCESS );
+
+  bool gamma = false;
+  // If there is no preferred format, use standard RGBA
+  if ( ( numFormats == 1 ) && ( surfaceFormats[ 0 ].format == VK_FORMAT_UNDEFINED ) )
+  {
+    if ( gamma )
+    {
+      _colorFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    }
+    else
+    {
+      _colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    }
+
+    _colorSpace = surfaceFormats[ 0 ].colorSpace;
+  }
+  else
+  {
+    bool foundFormat = false;
+
+    std::vector<VkFormat> wantedFormatsUNORM =
+    {
+      VK_FORMAT_R8G8B8A8_UNORM,
+      VK_FORMAT_B8G8R8A8_UNORM,
+      VK_FORMAT_A8B8G8R8_UNORM_PACK32,
+      VK_FORMAT_A8B8G8R8_UNORM_PACK32,
+      VK_FORMAT_R8G8B8_UNORM,
+      VK_FORMAT_B8G8R8_UNORM
+    };
+
+    std::vector<VkFormat> wantedFormatsSRGB =
+    {
+      VK_FORMAT_R8G8B8A8_SRGB,
+      VK_FORMAT_B8G8R8A8_SRGB,
+      VK_FORMAT_A8B8G8R8_SRGB_PACK32,
+      VK_FORMAT_A8B8G8R8_SRGB_PACK32,
+      VK_FORMAT_R8G8B8_SRGB,
+      VK_FORMAT_B8G8R8_SRGB
+    };
+
+    uint32_t numWantedFormats;
+    std::vector<VkFormat> wantedFormats;
+    if ( gamma )
+    {
+      wantedFormats = wantedFormatsSRGB;
+    }
+    else
+    {
+      wantedFormats = wantedFormatsUNORM;
+    }
+
+    for ( const auto& wantedFormat : wantedFormats )
+    {
+      for ( const auto& surfFormat : surfaceFormats )
+      {
+        if ( surfFormat.format == wantedFormat )
+        {
+          _colorFormat = surfFormat.format;
+          _colorSpace = surfFormat.colorSpace;
+
+          foundFormat = true;
+          break;
+        }
+      }
+      if ( foundFormat )
+        break;
+    }
+
+    wantedFormatsSRGB.clear( );
+    wantedFormatsUNORM.clear( );
+    wantedFormats.clear( );
+
+    // If we haven't found anything, fall back to first available
+    if ( !foundFormat )
+    {
+      _colorFormat = surfaceFormats[ 0 ].format;
+      _colorSpace = surfaceFormats[ 0 ].colorSpace;
+
+      if ( gamma )
+        throw new std::exception( "Cannot find a valid sRGB format for a render window surface, falling back to a default format." );
+    }
+  }
+
+  _swapChain = std::make_shared<VulkanSwapChain>( );
+  _swapChain->rebuild( getPresentDevice( ), _surface, WIDTH, HEIGHT, true, _colorFormat, _colorSpace );
 }

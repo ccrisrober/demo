@@ -1,4 +1,3 @@
-
 #include "VulkanRenderAPI.h"
 
 int main( )
@@ -7,6 +6,6 @@ int main( )
   vr.initialize( );
   vr.run( );
   vr.cleanup( );
-  //system( "PAUSE" );
+  system( "PAUSE" );
   return 0;
 }

@@ -53,11 +53,11 @@ VulkanDevice::VulkanDevice( VkPhysicalDevice device, uint32_t deviceIdx )
   }
 
   // Create logical device
-  /*std::vector< const char*> extensions =
+  std::vector< const char*> extensions =
   {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
-  uint32_t numExtensions = extensions.size( );*/
+  uint32_t numExtensions = extensions.size( );
 
   VkDeviceCreateInfo deviceInfo;
   deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -66,8 +66,8 @@ VulkanDevice::VulkanDevice( VkPhysicalDevice device, uint32_t deviceIdx )
   deviceInfo.queueCreateInfoCount = ( uint32_t ) queueCreateInfos.size( );
   deviceInfo.pQueueCreateInfos = queueCreateInfos.data( );
   deviceInfo.pEnabledFeatures = &_deviceFeatures;
-  deviceInfo.enabledExtensionCount = 0;
-  deviceInfo.ppEnabledExtensionNames = nullptr;
+  deviceInfo.enabledExtensionCount = numExtensions;
+  deviceInfo.ppEnabledExtensionNames = extensions.data( );
   deviceInfo.enabledLayerCount = 0;
   deviceInfo.ppEnabledLayerNames = nullptr;
 

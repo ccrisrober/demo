@@ -9,6 +9,7 @@
 #include <vector>
 #include "VulkanDevice.h"
 //#include "RenderWindow.h"
+#include "VulkanSwapChain.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -85,9 +86,14 @@ protected:
 
     return true;
   }
+  // MOVE TO ANOTHER CLASS
   //std::shared_ptr<RenderWindow> _renderWindow;
   VkSurfaceKHR _surface;
-  //
+  VkColorSpaceKHR _colorSpace;
+  VkFormat _colorFormat;
+  //VkFormat _depthFormat;
+  std::shared_ptr<VulkanSwapChain> _swapChain;
+  // <MOVE TO ANOTHER CLASS \\
 
   VkInstance _instance;
   GLFWwindow* _window;

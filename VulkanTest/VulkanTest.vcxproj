@@ -11,15 +11,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="RenderWindow.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="VulkanDevice.cpp" />
     <ClCompile Include="VulkanQueue.cpp" />
     <ClCompile Include="VulkanRenderAPI.cpp" />
+    <ClCompile Include="VulkanResource.cpp" />
+    <ClCompile Include="VulkanSwapChain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="RenderWindow.h" />
     <ClInclude Include="VulkanDevice.h" />
     <ClInclude Include="VulkanQueue.h" />
     <ClInclude Include="VulkanRenderAPI.h" />
+    <ClInclude Include="VulkanResource.h" />
+    <ClInclude Include="VulkanSwapChain.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0658C6C0-4CD4-4AD7-A2E2-ADB2C0EBB4DC}</ProjectGuid>
