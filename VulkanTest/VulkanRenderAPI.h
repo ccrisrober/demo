@@ -86,14 +86,21 @@ protected:
 
     return true;
   }
+
+
   // MOVE TO ANOTHER CLASS
   //std::shared_ptr<RenderWindow> _renderWindow;
+  VkRenderPass renderPass;
+  VkPipelineLayout pipelineLayout;
+  VkPipeline graphicsPipeline;
   VkSurfaceKHR _surface;
   VkColorSpaceKHR _colorSpace;
   VkFormat _colorFormat;
   //VkFormat _depthFormat;
   std::shared_ptr<VulkanSwapChain> _swapChain;
   // <MOVE TO ANOTHER CLASS \\
+
+
 
   VkInstance _instance;
   GLFWwindow* _window;

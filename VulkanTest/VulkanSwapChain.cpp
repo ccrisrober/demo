@@ -19,8 +19,8 @@ VulkanSwapChain::~VulkanSwapChain( )
   }
 }
 
-void VulkanSwapChain::rebuild( VulkanDevicePtr device, VkSurfaceKHR& surface, uint32_t w, uint32_t h, bool vsync,
-  VkFormat colorFormat, VkColorSpaceKHR colorSpace )
+void VulkanSwapChain::rebuild( VulkanDevicePtr device, VkSurfaceKHR& surface, 
+  uint32_t w, uint32_t h, bool vsync, VkFormat colorFormat, VkColorSpaceKHR colorSpace )
 {
   _device = device;
 
