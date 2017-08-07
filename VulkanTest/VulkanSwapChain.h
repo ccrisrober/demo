@@ -36,7 +36,7 @@ protected:
   uint32_t _width = 0;
   uint32_t _height = 0;
   VkSwapchainKHR _swapChain = VK_NULL_HANDLE;
-
+public:
   std::vector<VkImageView> swapChainImageViews;
 };
 

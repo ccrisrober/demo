@@ -86,6 +86,13 @@ VulkanRenderAPI::~VulkanRenderAPI( )
 
 void VulkanRenderAPI::cleanup( void )
 {
+  for ( size_t i = 0; i < swapChainFramebuffers.size( ); ++i )
+  {
+    vkDestroyFramebuffer( getPresentDevice( )->getLogical( ), 
+      swapChainFramebuffers[ i ], nullptr );
+  }
+
+
   vkDestroyPipeline( getPresentDevice( )->getLogical( ), graphicsPipeline, nullptr );
   vkDestroyPipelineLayout( getPresentDevice( )->getLogical( ), pipelineLayout, nullptr );
   vkDestroyRenderPass( getPresentDevice( )->getLogical( ), renderPass, nullptr );
@@ -535,4 +542,35 @@ void VulkanRenderAPI::initialize( void )
 
   vkDestroyShaderModule( getPresentDevice( )->getLogical( ), fragShaderModule, nullptr );
   vkDestroyShaderModule( getPresentDevice( )->getLogical( ), vertShaderModule, nullptr );
+
+
+
+
+
+
+  // FRAMEBUFFERS
+  swapChainFramebuffers.resize( _swapChain->swapChainImageViews.size( ) );
+
+  for ( size_t i = 0; i < _swapChain->swapChainImageViews.size( ); i++ )
+  {
+    VkImageView attachments[ ] = {
+      _swapChain->swapChainImageViews[ i ]
+    };
+
+    VkFramebufferCreateInfo framebufferInfo = { };
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments = attachments;
+    framebufferInfo.width = _swapChain->getWidth( );
+    framebufferInfo.height = _swapChain->getHeight( );
+    framebufferInfo.layers = 1;
+
+    if ( vkCreateFramebuffer( getPresentDevice( )->getLogical( ),
+      &framebufferInfo, nullptr, &swapChainFramebuffers[ i ] ) != VK_SUCCESS )
+    {
+      throw std::runtime_error( "failed to create framebuffer!" );
+    }
+  }
+
 }

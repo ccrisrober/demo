@@ -90,6 +90,8 @@ protected:
 
   // MOVE TO ANOTHER CLASS
   //std::shared_ptr<RenderWindow> _renderWindow;
+  std::vector<VkFramebuffer> swapChainFramebuffers;
+
   VkRenderPass renderPass;
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;

@@ -14,6 +14,7 @@
     <ClCompile Include="RenderWindow.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="VulkanDevice.cpp" />
+    <ClCompile Include="VulkanFramebuffer.cpp" />
     <ClCompile Include="VulkanQueue.cpp" />
     <ClCompile Include="VulkanRenderAPI.cpp" />
     <ClCompile Include="VulkanResource.cpp" />
@@ -23,6 +24,7 @@
   <ItemGroup>
     <ClInclude Include="RenderWindow.h" />
     <ClInclude Include="VulkanDevice.h" />
+    <ClInclude Include="VulkanFramebuffer.h" />
     <ClInclude Include="VulkanQueue.h" />
     <ClInclude Include="VulkanRenderAPI.h" />
     <ClInclude Include="VulkanResource.h" />
