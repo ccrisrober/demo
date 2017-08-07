@@ -83,6 +83,7 @@ VulkanRenderAPI::~VulkanRenderAPI( )
 
 void VulkanRenderAPI::cleanup( void )
 {
+  _swapChain.reset( );
   vkDestroySurfaceKHR( _instance, _surface, nullptr );
   _primaryDevices.clear( );
   _devices.clear( );
