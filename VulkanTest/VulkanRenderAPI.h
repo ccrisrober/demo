@@ -100,6 +100,9 @@ protected:
   VkFormat _colorFormat;
   //VkFormat _depthFormat;
   std::shared_ptr<VulkanSwapChain> _swapChain;
+
+  VkCommandPool commandPool;
+  std::vector<VkCommandBuffer> commandBuffers;
   // <MOVE TO ANOTHER CLASS \\
 
 

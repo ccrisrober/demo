@@ -86,16 +86,18 @@ VulkanRenderAPI::~VulkanRenderAPI( )
 
 void VulkanRenderAPI::cleanup( void )
 {
+  VkDevice logicalDevice = getPresentDevice( )->getLogical( );
+  vkDestroyCommandPool( logicalDevice, commandPool, nullptr );
+
   for ( size_t i = 0; i < swapChainFramebuffers.size( ); ++i )
   {
-    vkDestroyFramebuffer( getPresentDevice( )->getLogical( ), 
-      swapChainFramebuffers[ i ], nullptr );
+    vkDestroyFramebuffer( logicalDevice, swapChainFramebuffers[ i ], nullptr );
   }
 
 
-  vkDestroyPipeline( getPresentDevice( )->getLogical( ), graphicsPipeline, nullptr );
-  vkDestroyPipelineLayout( getPresentDevice( )->getLogical( ), pipelineLayout, nullptr );
-  vkDestroyRenderPass( getPresentDevice( )->getLogical( ), renderPass, nullptr );
+  vkDestroyPipeline( logicalDevice, graphicsPipeline, nullptr );
+  vkDestroyPipelineLayout( logicalDevice, pipelineLayout, nullptr );
+  vkDestroyRenderPass( logicalDevice, renderPass, nullptr );
 
   _swapChain.reset( );
   vkDestroySurfaceKHR( _instance, _surface, nullptr );
@@ -369,8 +371,8 @@ void VulkanRenderAPI::initialize( void )
     return buffer;
   };
 
-  std::function<VkShaderModule( const std::vector<char>& code )> 
-    createShaderModule = [&]( const std::vector<char>& code )
+  std::function<VkShaderModule( const std::vector<char>& code )>
+    createShaderModule = [ &] ( const std::vector<char>& code )
   {
     VkShaderModuleCreateInfo createInfo = { };
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -378,7 +380,7 @@ void VulkanRenderAPI::initialize( void )
     createInfo.pCode = reinterpret_cast<const uint32_t*>( code.data( ) );
 
     VkShaderModule shaderModule;
-    if ( vkCreateShaderModule( getPresentDevice()->getLogical( ), 
+    if ( vkCreateShaderModule( getPresentDevice( )->getLogical( ),
       &createInfo, nullptr, &shaderModule ) != VK_SUCCESS )
     {
       throw std::runtime_error( "failed to create shader module!" );
@@ -410,6 +412,9 @@ void VulkanRenderAPI::initialize( void )
 
 
   // RENDER PASSES
+  VkDevice logicalDevice = getPresentDevice( )->getLogical( );
+
+
   VkAttachmentDescription colorAttachment = { };
   colorAttachment.format = _colorFormat;
   colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -436,7 +441,7 @@ void VulkanRenderAPI::initialize( void )
   renderPassInfo.subpassCount = 1;
   renderPassInfo.pSubpasses = &subpass;
 
-  if ( vkCreateRenderPass( getPresentDevice( )->getLogical( ), &renderPassInfo, 
+  if ( vkCreateRenderPass( logicalDevice, &renderPassInfo,
     nullptr, &renderPass ) != VK_SUCCESS )
   {
     throw std::runtime_error( "failed to create render pass!" );
@@ -491,7 +496,7 @@ void VulkanRenderAPI::initialize( void )
   multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
   VkPipelineColorBlendAttachmentState colorBlendAttachment = { };
-  colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT 
+  colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT
     | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
   colorBlendAttachment.blendEnable = VK_FALSE;
 
@@ -511,7 +516,7 @@ void VulkanRenderAPI::initialize( void )
   pipelineLayoutInfo.setLayoutCount = 0;
   pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-  if ( vkCreatePipelineLayout( getPresentDevice( )->getLogical(), 
+  if ( vkCreatePipelineLayout( getPresentDevice( )->getLogical( ),
     &pipelineLayoutInfo, nullptr, &pipelineLayout ) != VK_SUCCESS )
   {
     throw std::runtime_error( "failed to create pipeline layout!" );
@@ -533,15 +538,15 @@ void VulkanRenderAPI::initialize( void )
   pipelineInfo.subpass = 0;
   pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-  if ( vkCreateGraphicsPipelines( getPresentDevice( )->getLogical( ), 
+  if ( vkCreateGraphicsPipelines( logicalDevice,
     VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline ) != VK_SUCCESS )
   {
     throw std::runtime_error( "failed to create graphics pipeline!" );
   }
 
 
-  vkDestroyShaderModule( getPresentDevice( )->getLogical( ), fragShaderModule, nullptr );
-  vkDestroyShaderModule( getPresentDevice( )->getLogical( ), vertShaderModule, nullptr );
+  vkDestroyShaderModule( logicalDevice, fragShaderModule, nullptr );
+  vkDestroyShaderModule( logicalDevice, vertShaderModule, nullptr );
 
 
 
@@ -566,11 +571,69 @@ void VulkanRenderAPI::initialize( void )
     framebufferInfo.height = _swapChain->getHeight( );
     framebufferInfo.layers = 1;
 
-    if ( vkCreateFramebuffer( getPresentDevice( )->getLogical( ),
+    if ( vkCreateFramebuffer( logicalDevice,
       &framebufferInfo, nullptr, &swapChainFramebuffers[ i ] ) != VK_SUCCESS )
     {
       throw std::runtime_error( "failed to create framebuffer!" );
     }
   }
 
+  // COMMAND POOL
+  VkCommandPoolCreateInfo poolCI;
+  poolCI.pNext = nullptr;
+  poolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+  poolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  poolCI.queueFamilyIndex = getPresentDevice( )->getQueueFamily( GpuQueueType::GPUT_GRAPHICS );
+  if ( vkCreateCommandPool( logicalDevice, &poolCI, nullptr, &commandPool ) != VK_SUCCESS )
+  {
+    throw std::runtime_error( "failed to create command pool!" );
+  }
+
+  // COMMAND BUFFERS
+  commandBuffers.resize( swapChainFramebuffers.size( ) );
+  VkCommandBufferAllocateInfo allocInfo = { };
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = commandPool;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = ( uint32_t ) commandBuffers.size( );
+
+  if ( vkAllocateCommandBuffers( logicalDevice, &allocInfo, commandBuffers.data( ) ) != VK_SUCCESS )
+  {
+    throw std::runtime_error( "failed to allocate command buffers!" );
+  }
+  // Starting command buffer recording
+  for ( size_t i = 0; i < commandBuffers.size( ); ++i )
+  {
+    VkCommandBufferBeginInfo beginInfo = { };
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+    vkBeginCommandBuffer( commandBuffers[ i ], &beginInfo );
+
+    // Starting a render pass
+    VkRenderPassBeginInfo renderPassInfo = { };
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapChainFramebuffers[ i ];
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = _swapChain->swapchainExtent;
+
+    VkClearValue clearColor = { 1.0f, 0.0f, 0.0f, 1.0f };
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+
+    // Basic drawing commands
+    vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline );
+
+    vkCmdDraw( commandBuffers[ i ], 3, 1, 0, 0 );
+
+    vkCmdEndRenderPass( commandBuffers[ i ] );
+
+    if ( vkEndCommandBuffer( commandBuffers[ i ] ) != VK_SUCCESS )
+    {
+      throw std::runtime_error( "failed to record command buffer!" );
+    }
+  }
 }

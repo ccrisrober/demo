@@ -34,7 +34,6 @@ void VulkanSwapChain::rebuild( VulkanDevicePtr device, VkSurfaceKHR& surface,
     &surfaceCaps );
   assert( result == VK_SUCCESS );
 
-  VkExtent2D swapchainExtent;
   if ( surfaceCaps.currentExtent.width != std::numeric_limits<uint32_t>::max( ) )
   {
     swapchainExtent = surfaceCaps.currentExtent;
