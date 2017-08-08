@@ -88,6 +88,9 @@ void VulkanRenderAPI::cleanup( void )
 {
   VkDevice logicalDevice = getPresentDevice( )->getLogical( );
 
+  vkDestroyBuffer( logicalDevice, vertexBuffer, nullptr );
+  vkFreeMemory( logicalDevice, vertexBufferMemory, nullptr );
+
   delete renderFinishedSemaphore; //vkDestroySemaphore( logicalDevice, renderFinishedSemaphore, nullptr );
   delete imageAvailableSemaphore; //vkDestroySemaphore( logicalDevice, imageAvailableSemaphore, nullptr );
 
@@ -348,8 +351,16 @@ void VulkanRenderAPI::initialize( void )
   // FIXED FUNCTIONS
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = { };
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexBindingDescriptionCount = 0;
-  vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+
+  VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription( );
+  std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = Vertex::getAttributeDescriptions( );
+
+  vertexInputInfo.vertexBindingDescriptionCount = 1;
+  vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>( attributeDescriptions.size( ) );
+  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data( );
+
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = { };
   inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -485,15 +496,72 @@ void VulkanRenderAPI::initialize( void )
     throw std::runtime_error( "failed to create command pool!" );
   }
 
+
+  // VERTEX BUFFER
+  VkBufferCreateInfo bufferInfo = { };
+  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bufferInfo.size = sizeof( vertices[ 0 ] ) * vertices.size( );
+  bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  if ( vkCreateBuffer( logicalDevice, &bufferInfo, nullptr, &vertexBuffer ) != VK_SUCCESS )
+  {
+    throw std::runtime_error( "failed to create vertex buffer!" );
+  }
+
+  VkMemoryRequirements memRequirements;
+  vkGetBufferMemoryRequirements( logicalDevice, vertexBuffer, &memRequirements );
+
+  VkMemoryAllocateInfo memAllocInfo = { };
+  memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  memAllocInfo.allocationSize = memRequirements.size;
+
+  VkPhysicalDeviceMemoryProperties memProperties;
+  vkGetPhysicalDeviceMemoryProperties( physicalDevice, &memProperties );
+
+  std::function<uint32_t( uint32_t, VkMemoryPropertyFlags )> findMemoryType = 
+    [ &] ( uint32_t typeFilter, VkMemoryPropertyFlags properties )
+  {
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties( physicalDevice, &memProperties );
+
+    for ( uint32_t i = 0; i < memProperties.memoryTypeCount; i++ )
+    {
+      if ( ( typeFilter & ( 1 << i ) ) && ( memProperties.memoryTypes[ i ].propertyFlags & properties ) == properties )
+      {
+        return i;
+      }
+    }
+
+    throw std::runtime_error( "failed to find suitable memory type!" );
+  };
+
+
+  memAllocInfo.memoryTypeIndex = findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
+
+  if ( vkAllocateMemory( logicalDevice, &memAllocInfo, nullptr, &vertexBufferMemory ) != VK_SUCCESS )
+  {
+    throw std::runtime_error( "failed to allocate vertex buffer memory!" );
+  }
+
+  vkBindBufferMemory( logicalDevice, vertexBuffer, vertexBufferMemory, 0 );
+
+  void* data;
+  vkMapMemory( logicalDevice, vertexBufferMemory, 0, bufferInfo.size, 0, &data );
+  memcpy( data, vertices.data( ), ( size_t ) bufferInfo.size );
+  vkUnmapMemory( logicalDevice, vertexBufferMemory );
+
+
+
   // COMMAND BUFFERS
   commandBuffers.resize( swapChainFramebuffers.size( ) );
-  VkCommandBufferAllocateInfo allocInfo = { };
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = commandPool;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = ( uint32_t ) commandBuffers.size( );
+  VkCommandBufferAllocateInfo cmdBufAllocInfo = { };
+  cmdBufAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cmdBufAllocInfo.commandPool = commandPool;
+  cmdBufAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cmdBufAllocInfo.commandBufferCount = ( uint32_t ) commandBuffers.size( );
 
-  if ( vkAllocateCommandBuffers( logicalDevice, &allocInfo, commandBuffers.data( ) ) != VK_SUCCESS )
+  if ( vkAllocateCommandBuffers( logicalDevice, &cmdBufAllocInfo, commandBuffers.data( ) ) != VK_SUCCESS )
   {
     throw std::runtime_error( "failed to allocate command buffers!" );
   }
@@ -523,7 +591,11 @@ void VulkanRenderAPI::initialize( void )
     // Basic drawing commands
     vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline );
 
-    vkCmdDraw( commandBuffers[ i ], 3, 1, 0, 0 );
+    VkBuffer vertexBuffers[ ] = { vertexBuffer };
+    VkDeviceSize offsets[ ] = { 0 };
+    vkCmdBindVertexBuffers( commandBuffers[ i ], 0, 1, vertexBuffers, offsets );
+
+    vkCmdDraw( commandBuffers[ i ], static_cast<uint32_t>( vertices.size( ) ), 1, 0, 0 );
 
     vkCmdEndRenderPass( commandBuffers[ i ] );
 
