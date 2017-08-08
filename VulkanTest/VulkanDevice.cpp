@@ -92,3 +92,9 @@ VulkanDevice::~VulkanDevice( )
 {
   vkDestroyDevice( _logicalDevice, nullptr );
 }
+
+void VulkanDevice::waitIdle( void ) const
+{
+  VkResult result = vkDeviceWaitIdle( _logicalDevice );
+  assert( result == VK_SUCCESS );
+}

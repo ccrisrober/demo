@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="RenderWindow.cpp" />
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="VulkanCommandBuffer.cpp" />
     <ClCompile Include="VulkanDevice.cpp" />
     <ClCompile Include="VulkanFramebuffer.cpp" />
     <ClCompile Include="VulkanQueue.cpp" />
@@ -22,7 +23,9 @@
     <ClCompile Include="VulkanTexture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="noncopyable.hpp" />
     <ClInclude Include="RenderWindow.h" />
+    <ClInclude Include="VulkanCommandBuffer.h" />
     <ClInclude Include="VulkanDevice.h" />
     <ClInclude Include="VulkanFramebuffer.h" />
     <ClInclude Include="VulkanQueue.h" />

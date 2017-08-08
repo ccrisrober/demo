@@ -7,6 +7,36 @@
 #include <algorithm> 
 using namespace std;
 
+class VulkanSemaphore : public VulkanResource
+{
+public:
+  VulkanSemaphore( VulkanDevicePtr device )
+    : VulkanResource( device )
+  {
+    VkSemaphoreCreateInfo semaphoreCI;
+    semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreCI.pNext = nullptr;
+    semaphoreCI.flags = 0;
+
+    VkResult result = vkCreateSemaphore( _device->getLogical( ), 
+      &semaphoreCI, nullptr, &_semaphore );
+    assert( result == VK_SUCCESS );
+  }
+  ~VulkanSemaphore( )
+  {
+    vkDestroySemaphore( _device->getLogical( ), _semaphore, nullptr );
+  }
+
+  // Returns the internal handle to the Vulkan object
+  VkSemaphore getHandle( ) const
+  {
+    return _semaphore;
+  }
+
+private:
+  VkSemaphore _semaphore;
+};
+
 class VulkanSwapChain
 {
 public:
@@ -42,26 +72,28 @@ public:
     return _swapChain;
   }
 
-  /*void acquireBackBuffer( )
+  /*uint32_t _currentSemaphoreIdx = 0;
+  uint32_t _currentBackBufferIdx = 0;
+  void acquireBackBuffer( )
   {
     uint32_t imageIndex;
 
     VkResult result = vkAcquireNextImageKHR( _device->getLogical( ), _swapChain, UINT64_MAX,
-      _surfaces[ mCurrentSemaphoreIdx ].sync->getHandle( ), VK_NULL_HANDLE, &imageIndex );
+      _surfaces[ _currentSemaphoreIdx ].sync->getHandle( ), VK_NULL_HANDLE, &imageIndex );
     assert( result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR );
 
     // In case surfaces aren't being distributed in round-robin fashion the image and semaphore indices might not match,
     // in which case just move the semaphores
-    if ( imageIndex != mCurrentSemaphoreIdx )
-      std::swap( mSurfaces[ mCurrentSemaphoreIdx ].sync, mSurfaces[ imageIndex ].sync );
+    if ( imageIndex != _currentSemaphoreIdx )
+      std::swap( mSurfaces[ _currentSemaphoreIdx ].sync, mSurfaces[ imageIndex ].sync );
 
-    mCurrentSemaphoreIdx = ( mCurrentSemaphoreIdx + 1 ) % mSurfaces.size( );
+    _currentSemaphoreIdx = ( _currentSemaphoreIdx + 1 ) % mSurfaces.size( );
 
     assert( !mSurfaces[ imageIndex ].acquired && "Same swap chain surface being acquired twice in a row without present()." );
     mSurfaces[ imageIndex ].acquired = true;
     mSurfaces[ imageIndex ].needsWait = true;
 
-    mCurrentBackBufferIdx = imageIndex;
+    _currentBackBufferIdx = imageIndex;
   }*/
 
 

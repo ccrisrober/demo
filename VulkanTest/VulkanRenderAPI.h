@@ -8,7 +8,7 @@
 
 #include <vector>
 #include "VulkanDevice.h"
-//#include "RenderWindow.h"
+#include "RenderWindow.h"
 #include "VulkanSwapChain.h"
 
 const int WIDTH = 800;
@@ -28,20 +28,20 @@ public:
       drawFrame( );
     }
   }
-  VkSemaphore imageAvailableSemaphore;
-  VkSemaphore renderFinishedSemaphore;
+  VulkanSemaphore* imageAvailableSemaphore;
+  VulkanSemaphore* renderFinishedSemaphore;
   void drawFrame( void )
   {
     uint32_t imageIndex;
-    VkSwapchainKHR swapChain = _swapChain->getSwapChain( );
+    VkSwapchainKHR swapChain = _renderWindow->_swapChain->getSwapChain( );
     vkAcquireNextImageKHR( getPresentDevice( )->getLogical( ), swapChain,
-      std::numeric_limits<uint64_t>::max( ), imageAvailableSemaphore, 
+      std::numeric_limits<uint64_t>::max( ), imageAvailableSemaphore->getHandle( ), 
       VK_NULL_HANDLE, &imageIndex );
 
     VkSubmitInfo submitInfo = { };
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[ ] = { imageAvailableSemaphore };
+    VkSemaphore waitSemaphores[ ] = { imageAvailableSemaphore->getHandle( ) };
     VkPipelineStageFlags waitStages[ ] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -50,7 +50,7 @@ public:
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffers[ imageIndex ];
 
-    VkSemaphore signalSemaphores[ ] = { renderFinishedSemaphore };
+    VkSemaphore signalSemaphores[ ] = { renderFinishedSemaphore->getHandle( ) };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -138,17 +138,15 @@ protected:
 
 
   // MOVE TO ANOTHER CLASS
-  //std::shared_ptr<RenderWindow> _renderWindow;
   std::vector<VkFramebuffer> swapChainFramebuffers;
 
   VkRenderPass renderPass;
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
-  VkSurfaceKHR _surface;
-  VkColorSpaceKHR _colorSpace;
-  VkFormat _colorFormat;
-  //VkFormat _depthFormat;
-  std::shared_ptr<VulkanSwapChain> _swapChain;
+ 
+
+  //VkSurfaceKHR _surface;
+  std::shared_ptr<RenderWindow> _renderWindow;
 
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;

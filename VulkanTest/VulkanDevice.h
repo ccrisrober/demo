@@ -48,6 +48,9 @@ public:
     return _deviceFeatures;
   }
 
+  // Blocks the calling thread until all operations on the device finish.
+  void waitIdle( void ) const;
+
   /*// Returns a set of properties describing the memory of the physical device.
   const VkPhysicalDeviceMemoryProperties& getMemoryProperties( ) const
   {

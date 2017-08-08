@@ -88,8 +88,8 @@ void VulkanRenderAPI::cleanup( void )
 {
   VkDevice logicalDevice = getPresentDevice( )->getLogical( );
 
-  vkDestroySemaphore( logicalDevice, renderFinishedSemaphore, nullptr );
-  vkDestroySemaphore( logicalDevice, imageAvailableSemaphore, nullptr );
+  delete renderFinishedSemaphore; //vkDestroySemaphore( logicalDevice, renderFinishedSemaphore, nullptr );
+  delete imageAvailableSemaphore; //vkDestroySemaphore( logicalDevice, imageAvailableSemaphore, nullptr );
 
   vkDestroyCommandPool( logicalDevice, commandPool, nullptr );
 
@@ -103,8 +103,10 @@ void VulkanRenderAPI::cleanup( void )
   vkDestroyPipelineLayout( logicalDevice, pipelineLayout, nullptr );
   vkDestroyRenderPass( logicalDevice, renderPass, nullptr );
 
-  _swapChain.reset( );
-  vkDestroySurfaceKHR( _instance, _surface, nullptr );
+  //_swapChain.reset( );
+
+  _renderWindow.reset( ); //vkDestroySurfaceKHR( _instance, _surface, nullptr );
+
   _primaryDevices.clear( );
   _devices.clear( );
 #ifndef NDEBUG
@@ -239,120 +241,10 @@ void VulkanRenderAPI::initialize( void )
     _primaryDevices.push_back( _devices.front( ) );
   }
 
-  // Surface KHR
-  if ( glfwCreateWindowSurface( this->getInstance( ), this->getWindow( ),
-    nullptr, &_surface ) != VK_SUCCESS )
-  {
-    throw std::runtime_error( "failed to create window surface!" );
-  }
+  _renderWindow = std::make_shared<RenderWindow>( *this );
 
   std::shared_ptr<VulkanDevice> presentDevice = this->getPresentDevice( );
   VkPhysicalDevice physicalDevice = presentDevice->getPhysical( );
-
-  uint32_t presentQueueFamily = presentDevice->getQueueFamily( GPUT_GRAPHICS );
-
-  // TODO: USED??
-  VkBool32 supportsPresent = false;
-  vkGetPhysicalDeviceSurfaceSupportKHR( physicalDevice, presentQueueFamily, 
-    _surface, &supportsPresent );
-  // TODO: USED?? \
-
-
-  uint32_t numFormats;
-  result = vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &numFormats, nullptr );
-  assert( result == VK_SUCCESS );
-  assert( numFormats > 0 );
-
-  std::vector<VkSurfaceFormatKHR> surfaceFormats( numFormats );
-  result = vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &numFormats, surfaceFormats.data( ) );
-  assert( result == VK_SUCCESS );
-
-  bool gamma = false;
-  // If there is no preferred format, use standard RGBA
-  if ( ( numFormats == 1 ) && ( surfaceFormats[ 0 ].format == VK_FORMAT_UNDEFINED ) )
-  {
-    if ( gamma )
-    {
-      _colorFormat = VK_FORMAT_R8G8B8A8_SRGB;
-    }
-    else
-    {
-      _colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
-    }
-
-    _colorSpace = surfaceFormats[ 0 ].colorSpace;
-  }
-  else
-  {
-    bool foundFormat = false;
-
-    std::vector<VkFormat> wantedFormatsUNORM =
-    {
-      VK_FORMAT_R8G8B8A8_UNORM,
-      VK_FORMAT_B8G8R8A8_UNORM,
-      VK_FORMAT_A8B8G8R8_UNORM_PACK32,
-      VK_FORMAT_A8B8G8R8_UNORM_PACK32,
-      VK_FORMAT_R8G8B8_UNORM,
-      VK_FORMAT_B8G8R8_UNORM
-    };
-
-    std::vector<VkFormat> wantedFormatsSRGB =
-    {
-      VK_FORMAT_R8G8B8A8_SRGB,
-      VK_FORMAT_B8G8R8A8_SRGB,
-      VK_FORMAT_A8B8G8R8_SRGB_PACK32,
-      VK_FORMAT_A8B8G8R8_SRGB_PACK32,
-      VK_FORMAT_R8G8B8_SRGB,
-      VK_FORMAT_B8G8R8_SRGB
-    };
-
-    uint32_t numWantedFormats;
-    std::vector<VkFormat> wantedFormats;
-    if ( gamma )
-    {
-      wantedFormats = wantedFormatsSRGB;
-    }
-    else
-    {
-      wantedFormats = wantedFormatsUNORM;
-    }
-
-    for ( const auto& wantedFormat : wantedFormats )
-    {
-      for ( const auto& surfFormat : surfaceFormats )
-      {
-        if ( surfFormat.format == wantedFormat )
-        {
-          _colorFormat = surfFormat.format;
-          _colorSpace = surfFormat.colorSpace;
-
-          foundFormat = true;
-          break;
-        }
-      }
-      if ( foundFormat )
-        break;
-    }
-
-    wantedFormatsSRGB.clear( );
-    wantedFormatsUNORM.clear( );
-    wantedFormats.clear( );
-
-    // If we haven't found anything, fall back to first available
-    if ( !foundFormat )
-    {
-      _colorFormat = surfaceFormats[ 0 ].format;
-      _colorSpace = surfaceFormats[ 0 ].colorSpace;
-
-      if ( gamma )
-        throw new std::exception( "Cannot find a valid sRGB format for a render window surface, falling back to a default format." );
-    }
-  }
-
-  _swapChain = std::make_shared<VulkanSwapChain>( );
-  _swapChain->rebuild( getPresentDevice( ), _surface, WIDTH, HEIGHT, true, _colorFormat, _colorSpace );
-
-
 
   // TODO: MOVE TO ANOTHER ZONE
   std::function<std::vector<char>( const std::string& )> readFile = [ &] ( const std::string& filename )
@@ -420,7 +312,7 @@ void VulkanRenderAPI::initialize( void )
 
 
   VkAttachmentDescription colorAttachment = { };
-  colorAttachment.format = _colorFormat;
+  colorAttachment.format = _renderWindow->_colorFormat;
   colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
   colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -468,14 +360,14 @@ void VulkanRenderAPI::initialize( void )
   VkViewport viewport = { };
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width = ( float ) _swapChain->getWidth( );
-  viewport.height = ( float ) _swapChain->getHeight( );
+  viewport.width = ( float ) _renderWindow->_swapChain->getWidth( );
+  viewport.height = ( float ) _renderWindow->_swapChain->getHeight( );
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
 
   VkRect2D scissor = { };
   scissor.offset = { 0, 0 };
-  scissor.extent = { _swapChain->getWidth( ), _swapChain->getHeight( ) };
+  scissor.extent = { _renderWindow->_swapChain->getWidth( ), _renderWindow->_swapChain->getHeight( ) };
 
   VkPipelineViewportStateCreateInfo viewportState = { };
   viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -558,12 +450,12 @@ void VulkanRenderAPI::initialize( void )
 
 
   // FRAMEBUFFERS
-  swapChainFramebuffers.resize( _swapChain->swapChainImageViews.size( ) );
+  swapChainFramebuffers.resize( _renderWindow->_swapChain->swapChainImageViews.size( ) );
 
-  for ( size_t i = 0; i < _swapChain->swapChainImageViews.size( ); i++ )
+  for ( size_t i = 0; i < _renderWindow->_swapChain->swapChainImageViews.size( ); i++ )
   {
     VkImageView attachments[ ] = {
-      _swapChain->swapChainImageViews[ i ]
+      _renderWindow->_swapChain->swapChainImageViews[ i ]
     };
 
     VkFramebufferCreateInfo framebufferInfo = { };
@@ -571,8 +463,8 @@ void VulkanRenderAPI::initialize( void )
     framebufferInfo.renderPass = renderPass;
     framebufferInfo.attachmentCount = 1;
     framebufferInfo.pAttachments = attachments;
-    framebufferInfo.width = _swapChain->getWidth( );
-    framebufferInfo.height = _swapChain->getHeight( );
+    framebufferInfo.width = _renderWindow->_swapChain->getWidth( );
+    framebufferInfo.height = _renderWindow->_swapChain->getHeight( );
     framebufferInfo.layers = 1;
 
     if ( vkCreateFramebuffer( logicalDevice,
@@ -620,7 +512,7 @@ void VulkanRenderAPI::initialize( void )
     renderPassInfo.renderPass = renderPass;
     renderPassInfo.framebuffer = swapChainFramebuffers[ i ];
     renderPassInfo.renderArea.offset = { 0, 0 };
-    renderPassInfo.renderArea.extent = _swapChain->swapchainExtent;
+    renderPassInfo.renderArea.extent = _renderWindow->_swapChain->swapchainExtent;
 
     VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     renderPassInfo.clearValueCount = 1;
@@ -642,15 +534,6 @@ void VulkanRenderAPI::initialize( void )
   }
 
   // SEMAPHORES
-  VkSemaphoreCreateInfo semaphoreCI;
-  semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  semaphoreCI.pNext = nullptr;
-  semaphoreCI.flags = 0;
-
-  if ( vkCreateSemaphore( logicalDevice, &semaphoreCI, nullptr, &imageAvailableSemaphore ) != VK_SUCCESS ||
-    vkCreateSemaphore( logicalDevice, &semaphoreCI, nullptr, &renderFinishedSemaphore ) != VK_SUCCESS )
-  {
-
-    throw std::runtime_error( "failed to create semaphores!" );
-  }
+  imageAvailableSemaphore = new VulkanSemaphore( getPresentDevice( ) );
+  renderFinishedSemaphore = new VulkanSemaphore( getPresentDevice( ) );
 }
