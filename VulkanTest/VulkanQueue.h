@@ -26,6 +26,11 @@ public:
     uint32_t index );
   ~VulkanQueue( void );
 
+  VkQueue getQueue( void ) const
+  {
+    return _queue;
+  }
+
 protected:
   VulkanDevice& _device;
   VkQueue _queue;

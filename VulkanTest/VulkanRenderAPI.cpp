@@ -87,6 +87,10 @@ VulkanRenderAPI::~VulkanRenderAPI( )
 void VulkanRenderAPI::cleanup( void )
 {
   VkDevice logicalDevice = getPresentDevice( )->getLogical( );
+
+  vkDestroySemaphore( logicalDevice, renderFinishedSemaphore, nullptr );
+  vkDestroySemaphore( logicalDevice, imageAvailableSemaphore, nullptr );
+
   vkDestroyCommandPool( logicalDevice, commandPool, nullptr );
 
   for ( size_t i = 0; i < swapChainFramebuffers.size( ); ++i )
@@ -618,7 +622,7 @@ void VulkanRenderAPI::initialize( void )
     renderPassInfo.renderArea.offset = { 0, 0 };
     renderPassInfo.renderArea.extent = _swapChain->swapchainExtent;
 
-    VkClearValue clearColor = { 1.0f, 0.0f, 0.0f, 1.0f };
+    VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
 
@@ -635,5 +639,18 @@ void VulkanRenderAPI::initialize( void )
     {
       throw std::runtime_error( "failed to record command buffer!" );
     }
+  }
+
+  // SEMAPHORES
+  VkSemaphoreCreateInfo semaphoreCI;
+  semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  semaphoreCI.pNext = nullptr;
+  semaphoreCI.flags = 0;
+
+  if ( vkCreateSemaphore( logicalDevice, &semaphoreCI, nullptr, &imageAvailableSemaphore ) != VK_SUCCESS ||
+    vkCreateSemaphore( logicalDevice, &semaphoreCI, nullptr, &renderFinishedSemaphore ) != VK_SUCCESS )
+  {
+
+    throw std::runtime_error( "failed to create semaphores!" );
   }
 }

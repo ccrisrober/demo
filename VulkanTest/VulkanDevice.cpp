@@ -26,13 +26,12 @@ VulkanDevice::VulkanDevice( VkPhysicalDevice device, uint32_t deviceIdx )
 
   auto populateQueueInfo = [ &] ( GpuQueueType type, uint32_t familyIdx )
   {
-
     VkDeviceQueueCreateInfo queueCreateInfo;
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo.pNext = nullptr;
     queueCreateInfo.flags = 0;
     queueCreateInfo.queueFamilyIndex = familyIdx;
-    queueCreateInfo.queueCount = queueFamilyProperties[ familyIdx ].queueCount;
+    queueCreateInfo.queueCount = 1;// queueFamilyProperties[ familyIdx ].queueCount;
 
     float queuePriority = 1.0f;
     queueCreateInfo.pQueuePriorities = &queuePriority;

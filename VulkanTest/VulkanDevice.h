@@ -82,7 +82,7 @@ private:
   VkPhysicalDeviceFeatures _deviceFeatures;
   //VkPhysicalDeviceMemoryProperties _memoryProperties;
 
-
+public:
   // Contains data about a set of queues of a specific type.
   struct QueueInfo
   {

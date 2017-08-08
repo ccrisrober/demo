@@ -31,6 +31,40 @@ public:
   {
     return _height;
   }
+
+  operator VkSwapchainKHR( )
+  {
+    return _swapChain;
+  }
+
+  VkSwapchainKHR getSwapChain( void ) const
+  {
+    return _swapChain;
+  }
+
+  /*void acquireBackBuffer( )
+  {
+    uint32_t imageIndex;
+
+    VkResult result = vkAcquireNextImageKHR( _device->getLogical( ), _swapChain, UINT64_MAX,
+      _surfaces[ mCurrentSemaphoreIdx ].sync->getHandle( ), VK_NULL_HANDLE, &imageIndex );
+    assert( result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR );
+
+    // In case surfaces aren't being distributed in round-robin fashion the image and semaphore indices might not match,
+    // in which case just move the semaphores
+    if ( imageIndex != mCurrentSemaphoreIdx )
+      std::swap( mSurfaces[ mCurrentSemaphoreIdx ].sync, mSurfaces[ imageIndex ].sync );
+
+    mCurrentSemaphoreIdx = ( mCurrentSemaphoreIdx + 1 ) % mSurfaces.size( );
+
+    assert( !mSurfaces[ imageIndex ].acquired && "Same swap chain surface being acquired twice in a row without present()." );
+    mSurfaces[ imageIndex ].acquired = true;
+    mSurfaces[ imageIndex ].needsWait = true;
+
+    mCurrentBackBufferIdx = imageIndex;
+  }*/
+
+
 protected:
   VulkanDevicePtr _device;
   uint32_t _width = 0;
